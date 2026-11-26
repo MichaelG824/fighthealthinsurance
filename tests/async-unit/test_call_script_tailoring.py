@@ -264,6 +264,30 @@ class DeadlineTest(SimpleTestCase):
         answer = _with(questions=['My deadline is coming up, so can you expedite this?', "Who reviewed my MRI request?"])
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
+    def test_a_bare_due_weekday_is_refused(self):
+        answer = _with(why='My appeal is due Friday, so I need answers.')
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_before_a_weekday_is_refused(self):
+        answer = _with(why='I must file before Friday.')
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_tomorrow_is_refused(self):
+        answer = _with(why='I have to send it tomorrow.')
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_before_tomorrow_is_refused(self):
+        answer = _with(why='I need this fixed before tomorrow.')
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_fortnight_is_refused(self):
+        answer = _with(why='I only have a fortnight to appeal.')
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_within_the_week_is_refused(self):
+        answer = _with(why='My appeal must be in within the week.')
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
     def test_may_as_a_verb_is_accepted(self):
         answer = _with(
             why="My MRI was denied, and I may need to resend my doctor's notes."

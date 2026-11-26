@@ -625,7 +625,7 @@ _QUOTES = "\"'“”‘’"
 # a question or not: no length of time ("4 days", "fourteen days",
 # "one hundred eighty days", "a few weeks"), no month ("March 3", "until
 # mid-March", "early April"), no date ("3/15", "2027-03-15"), no day named
-# from now ("next week", "by Friday"). "May" is the month only with a day or
+# from now ("next week", "Friday", "tomorrow", "within the week"). "May" is the month only with a day or
 # after a word that dates it ("May 3", "by May", "the end of May"), not in
 # "I may need to resend it".
 _NUMBER_WORD = (
@@ -650,7 +650,8 @@ _DEADLINE_VALUE = re.compile(
     r"|\b(?:by|until|before|in|of)\s+(?:the\s+)?"
     r"(?:(?:mid|early|late)[\s-]+|(?:end|middle|start|beginning)\s+of\s+)?may\b"
     r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b|\b\d{4}-\d{1,2}-\d{1,2}\b"
-    rf"|\b(?:next|this|last|by|on|until)\s+(?:week|month|year|{_WEEKDAY})\b"
+    rf"|\b(?:{_WEEKDAY}|tomorrow|tonight|fortnight)\b"
+    r"|\b(?:next|this|last|within\s+(?:the|a))\s+(?:week|month|year)\b"
     r"|\bend\s+of\s+(?:the\s+)?(?:week|month|year)\b",
     re.IGNORECASE,
 )
@@ -660,8 +661,7 @@ _DEADLINE_VALUE = re.compile(
 _DEADLINE_WORD = re.compile(
     r"\bdeadlines?\b|\btime\s+limits?\b|\b(?:appeal|filing)\s+window\b"
     r"|\bwindow\s+(?:is\s+)?(?:\w+\s+)?(?:clos(?:es|ing|ed)|ends|ending)\b"
-    r"|\bdue\s+(?:by|on|in|soon|today|tonight|tomorrow)\b"
-    r"|\b(?:by|until)\s+(?:today|tonight|tomorrow)\b"
+    r"|\bdue\s+(?:by|on|in|soon|today)\b|\b(?:by|until)\s+today\b"
     r"|\b(?:no|not)\s+later\s+than\b"
     r"|\bexpir(?:e|es|ed|ing|ation)\b|\blast\s+day\b"
     r"|\b(?:runs?|running)\s+out\b",
