@@ -60,7 +60,10 @@ function applyTailoring(tailored: Tailored): boolean {
   return true;
 }
 
-async function tailorScript(form: HTMLFormElement, status: HTMLElement): Promise<void> {
+async function tailorScript(
+  form: HTMLFormElement,
+  status: HTMLElement,
+): Promise<void> {
   status.textContent =
     "Tailoring two parts of this script to your denial. You can start reading: it takes up to a minute.";
   status.hidden = false;
@@ -75,7 +78,8 @@ async function tailorScript(form: HTMLFormElement, status: HTMLElement): Promise
     });
     const data = response.ok ? await response.json() : null;
     if (data && isTailored(data.tailored) && applyTailoring(data.tailored)) {
-      status.textContent = 'Done: the parts marked "Tailored to your denial" were written for your case.';
+      status.textContent =
+        'Done: the parts marked "Tailored to your denial" were written for your case.';
       return;
     }
   } catch {
@@ -91,7 +95,9 @@ function setupCallScript(): void {
   if (printButton) {
     printButton.addEventListener("click", () => window.print());
   }
-  const form = document.getElementById("call-script-tailor") as HTMLFormElement | null;
+  const form = document.getElementById(
+    "call-script-tailor",
+  ) as HTMLFormElement | null;
   const status = document.getElementById("call-script-tailor-status");
   if (form && status) {
     void tailorScript(form, status);
