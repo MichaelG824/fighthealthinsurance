@@ -22,6 +22,7 @@ from fighthealthinsurance.call_script import (
     make_call_script_prompt,
     parse_tailoring,
 )
+from fighthealthinsurance.ml import spend
 
 INPUTS = CallScriptInputs(
     goal=GOAL_FIND_OUT_WHY,
@@ -177,3 +178,26 @@ class TailorTest(SimpleTestCase):
 
     def test_with_no_model_to_ask_the_template_stays(self):
         self.assertIsNone(self._tailor(_router([])))
+
+
+class TailorSpendChannelTest(SimpleTestCase):
+    def _channel_seen(self, denial):
+        seen = []
+        model = _model("ours", GOOD)
+
+        async def infer(*args, **kwargs):
+            seen.append(spend.assistant_work())
+            return GOOD
+
+        model._infer_no_context = AsyncMock(side_effect=infer)
+        with patch.object(call_script, "ml_router", _router([model])):
+            asyncio.run(call_script.tailor_script(INPUTS, denial=denial))
+        return seen
+
+    def test_an_assistant_case_tailors_under_the_assistant_channel(self):
+        denial = SimpleNamespace(channel="assistant", denial_text="denied")
+        self.assertEqual(self._channel_seen(denial), [True])
+
+    def test_a_site_case_tailors_under_the_site_channel(self):
+        denial = SimpleNamespace(channel="site", denial_text="denied")
+        self.assertEqual(self._channel_seen(denial), [False])

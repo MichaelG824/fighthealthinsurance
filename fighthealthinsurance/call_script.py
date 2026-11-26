@@ -27,7 +27,7 @@ from typing import Any, Iterable, Mapping, Optional
 from loguru import logger
 
 from fighthealthinsurance.chat.safety_filters import detect_false_promises
-from fighthealthinsurance.ml import llm_usage
+from fighthealthinsurance.ml import llm_usage, spend
 from fighthealthinsurance.ml.bad_output_utils import (
     is_bad_output,
     strip_boilerplate_service,
@@ -675,23 +675,27 @@ async def tailor_script(
     inputs: CallScriptInputs, denial: Optional[Denial] = None
 ) -> Optional[Tailoring]:
     """The two tailored parts of a case's script, or None (the template
-    stays). ``denial`` is the case, so the model calls count from its origin."""
+    stays). ``denial`` is the case, so the model calls count from its origin
+    and spend under its channel."""
     models = tailor_backends(inputs.use_external)
     if not models:
         return None
     prompt = make_call_script_prompt(inputs)
     try:
-        text = await asyncio.wait_for(
-            infer_with_fallback(
-                system_prompts=[CALL_SCRIPT_SYSTEM_PROMPT],
-                prompt=prompt,
-                models=models,
-                timeout=MODEL_TIMEOUT_SECONDS,
-                label="call_script",
-                validator=lambda answer: parse_tailoring(answer, prompt) is not None,
-            ),
-            timeout=TAILOR_BUDGET_SECONDS,
-        )
+        with spend.channel_scope():
+            if denial is not None:
+                spend.set_channel_of(denial)
+            text = await asyncio.wait_for(
+                infer_with_fallback(
+                    system_prompts=[CALL_SCRIPT_SYSTEM_PROMPT],
+                    prompt=prompt,
+                    models=models,
+                    timeout=MODEL_TIMEOUT_SECONDS,
+                    label="call_script",
+                    validator=lambda reply: parse_tailoring(reply, prompt) is not None,
+                ),
+                timeout=TAILOR_BUDGET_SECONDS,
+            )
     except asyncio.TimeoutError:
         logger.info("call script: tailoring ran out of time; the template stays")
         return None
