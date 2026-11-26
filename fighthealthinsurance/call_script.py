@@ -625,8 +625,8 @@ _QUOTES = "\"'“”‘’"
 # a question or not: no length of time ("4 days", "fourteen days",
 # "one hundred eighty days", "a few weeks"), no month ("March 3", "until
 # mid-March", "early April"), no date ("3/15", "2027-03-15"), no day named
-# from now ("next week", "Friday", "tomorrow", "within the week"). "May" is the month only with a day or
-# after a word that dates it ("May 3", "by May", "the end of May"), not in
+# from now ("next week", "Friday", "tomorrow", "within the week"). "May" is
+# the month only with a day or after a word that dates it ("May 3", "by May", "the end of May"), not in
 # "I may need to resend it".
 _NUMBER_WORD = (
     r"one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
