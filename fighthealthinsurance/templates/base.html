@@ -191,6 +191,7 @@
                             <ul class="fhi-nav-submenu">
                                 <li><a href="{% url 'explain_denial' %}">Explain Denial</a></li>
                                 <li><a href="{% url 'understand_policy' %}">Explain Policy</a></li>
+                                {% if call_script_on %}<li><a href="{% url 'call_script' %}">What to Say on the Phone</a></li>{% endif %}
                             </ul>
                         </details>
                     </li>

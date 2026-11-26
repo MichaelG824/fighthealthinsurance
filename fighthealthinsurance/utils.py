@@ -2518,6 +2518,16 @@ def denial_watch_page_enabled() -> bool:
     return bool(getattr(settings, "DENIAL_WATCH_PAGE_ENABLED", False))
 
 
+def call_script_enabled() -> bool:
+    """Whether the phone script page is live.
+
+    Its views, the callouts that lead to it and the menu links all ask
+    here, for the same reason as medicaid_eligibility_page_enabled: one
+    flag, read in one place.
+    """
+    return bool(getattr(settings, "CALL_SCRIPT_ENABLED", False))
+
+
 def strip_internal_keys(parameters: dict) -> dict:
     """Return a copy of ``parameters`` without underscore-prefixed keys.
 

@@ -1920,6 +1920,117 @@ section:not(.slider) .share-subcopy,
 .fhi-regulator-callout .fhi-stack {
     margin: 0.75rem 0;
 }
+/* The phone script page (call_script.html). Its print rules stay in the
+   template, since they hide the site's own header and footer. */
+.fhi-call-script .fhi-page-lede { overflow-wrap: anywhere; }
+.fhi-call-goals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fhi-space-2);
+    margin: var(--fhi-space-4) 0 var(--fhi-space-6);
+}
+.fhi-call-step {
+    border: 1px solid var(--fhi-line);
+    border-radius: var(--fhi-radius);
+    padding: var(--fhi-space-5);
+    margin-bottom: var(--fhi-space-4);
+    background: #fff;
+}
+.fhi-call-step > h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--fhi-space-3);
+    font-size: var(--fhi-text-subsection);
+    margin: 0 0 var(--fhi-space-3);
+}
+.fhi-call-step ul { margin: 0; padding-left: 1.25rem; }
+.fhi-call-step li { margin: var(--fhi-space-1) 0; }
+.fhi-call-number {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--fhi-green-ink);
+    color: #fff;
+    font-size: var(--fhi-text-small);
+}
+/* What the person reads out, a size up from the page's text. */
+.fhi-call-say {
+    color: var(--fhi-ink-base);
+    font-size: var(--fhi-text-lead);
+    margin: var(--fhi-space-2) 0;
+    padding-left: var(--fhi-space-4);
+    border-left: 3px solid var(--fhi-green);
+}
+.fhi-call-questions {
+    font-size: var(--fhi-text-lead);
+    margin: 0;
+    padding-left: 1.75rem;
+}
+.fhi-call-questions li { margin: var(--fhi-space-3) 0; }
+.fhi-call-write {
+    display: inline-block;
+    font-size: var(--fhi-text-micro);
+    font-weight: 700;
+    color: var(--fhi-green-deep);
+    background: #eef5d2;
+    border-radius: 4px;
+    padding: 0 var(--fhi-space-2);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.fhi-call-tailored-tag {
+    display: inline-block;
+    font-size: var(--fhi-text-micro);
+    font-weight: 700;
+    color: var(--fhi-ink-2);
+    background: var(--fhi-surface);
+    border: 1px solid var(--fhi-line);
+    border-radius: 4px;
+    padding: 0 var(--fhi-space-2);
+    margin-left: var(--fhi-space-2);
+    vertical-align: middle;
+}
+.fhi-call-if {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: var(--fhi-space-2) var(--fhi-space-5);
+    margin: 0;
+}
+.fhi-call-if dt { font-weight: 400; font-style: italic; color: var(--fhi-ink-2); }
+.fhi-call-if dd { margin: 0; }
+@media (max-width: 640px) {
+    .fhi-call-if { grid-template-columns: minmax(0, 1fr); }
+    .fhi-call-if dt { margin-top: var(--fhi-space-3); }
+}
+.fhi-call-script > .fhi-cluster { margin: var(--fhi-space-5) 0; }
+.fhi-call-notes-table { width: 100%; border-collapse: collapse; }
+.fhi-call-notes-table th,
+.fhi-call-notes-table td {
+    border: 1px solid var(--fhi-field-line);
+    padding: var(--fhi-space-2) var(--fhi-space-3);
+    text-align: left;
+    vertical-align: top;
+}
+.fhi-call-notes-table th { width: 38%; font-weight: 600; }
+@media (max-width: 640px) {
+    .fhi-call-notes-table th { width: 50%; }
+}
+.fhi-call-notes-table td { height: 2.75rem; }
+.fhi-call-footer { margin-top: var(--fhi-space-5); }
+.fhi-call-print-only { display: none; }
+
+/* The phone-script callout (partials/call_script_callout.html), on the send
+   and follow-up pages: a success box, spaced like the regulator callout. */
+.fhi-call-callout p {
+    margin: 0.5rem 0;
+}
+.fhi-call-callout form {
+    margin: 0.75rem 0 0;
+}
 .fhi-regulator-callout .fhi-regulator-note {
     font-size: 0.9rem;
     color: var(--fhi-ink-2);
@@ -3773,8 +3884,11 @@ summary.fhi-nav-link::after {
 
 @media print {
     /* A fixed control has no place on paper, and the policy pages are the
-       ones people print. */
-    .fhi-chat-button {
+       ones people print. The skip link sits 40px above the top of the
+       screen, which on paper is inside the page's margin, so every printed
+       page opened with it. */
+    .fhi-chat-button,
+    .skip-link {
         display: none;
     }
 }

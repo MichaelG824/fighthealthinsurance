@@ -796,6 +796,20 @@ urlpatterns += [
         views.ExplainDenialView.as_view(),
         name="explain_denial",
     ),
+    # What to say on the phone (call_script.py). A case's hidden fields
+    # include the email, as on the send page.
+    path(
+        "call-script",
+        sensitive_post_parameters("email", "insurer", "procedure")(
+            views.CallScriptView.as_view()
+        ),
+        name="call_script",
+    ),
+    path(
+        "call-script/tailor",
+        sensitive_post_parameters("email")(views.CallScriptTailorView.as_view()),
+        name="call_script_tailor",
+    ),
     # Understand my Policy page
     path(
         "understand-policy",

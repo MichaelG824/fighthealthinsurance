@@ -1,0 +1,46 @@
+{% comment %}
+The callout that leads to the phone script (call_script.html) from a case,
+shared by the send-your-appeal page and the follow-up page. It posts the
+hidden fields that page already carries, to a new tab, so the page stays
+where it is. The script opens on checking that the insurer has the appeal,
+the call these pages already tell people to make, and offers the other goals
+there. Nothing shows while CALL_SCRIPT_ENABLED is off.
+
+The caller says:
+- case: "followup" on the follow-up page, which names its case by the uuid
+  and follow_up_semi_sekret in its own link (view.kwargs). Otherwise the
+  send page's user_email, denial_id and semi_sekret from its context.
+{% endcomment %}
+{% if call_script_on %}
+<div class="alert-box alert-box-success fhi-call-callout">
+  {% if case == "followup" %}
+  <h4 class="fhi-callout-title">📞 Still waiting to hear back? Call with a script.</h4>
+  {% else %}
+  <h4 class="fhi-callout-title">📞 Calling your insurer? Get a script first.</h4>
+  {% endif %}
+  <p>
+    Insurers train their reps for these calls. We'll give you what to ask,
+    what to write down, and what to say if you get stuck. You make the call
+    yourself; we never call for you.
+  </p>
+  <form action="{% url 'call_script' %}" method="post" target="_blank">
+    {% csrf_token %}
+    <input type="hidden" name="goal" value="check_status">
+    {% if case == "followup" %}
+    <input type="hidden" name="uuid" value="{{ view.kwargs.uuid }}">
+    <input type="hidden" name="follow_up_semi_sekret" value="{{ view.kwargs.follow_up_semi_sekret }}">
+    {% else %}
+    <input type="hidden" name="email" value="{{ user_email }}">
+    <input type="hidden" name="denial_id" value="{{ denial_id }}">
+    <input type="hidden" name="semi_sekret" value="{{ semi_sekret }}">
+    {% endif %}
+    <button type="submit" id="get_call_script" class="fhi-button fhi-button-secondary">
+      📞 Get my phone script (opens in a new tab)
+    </button>
+  </form>
+  <p>
+    It starts with checking that they got your appeal. You can switch to
+    finding out why it was denied, or pushing back, from there.
+  </p>
+</div>
+{% endif %}

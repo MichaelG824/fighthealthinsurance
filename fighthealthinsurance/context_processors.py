@@ -190,6 +190,7 @@ def feature_pages_context(request):
     starting an appeal from the chat (only while an appeal tool is on)."""
     from fighthealthinsurance.utils import (
         ai_assistants_page_enabled,
+        call_script_enabled,
         medicaid_eligibility_page_enabled,
     )
 
@@ -203,4 +204,5 @@ def feature_pages_context(request):
         "ai_assistants_on": ai_assistants_on,
         "ai_assistants_appeal_on": ai_assistants_appeal_on,
         "medicaid_eligibility_on": medicaid_eligibility_page_enabled(),
+        "call_script_on": call_script_enabled(),
     }

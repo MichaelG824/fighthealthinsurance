@@ -90,6 +90,7 @@ Other Resources
               person can click.
             {% endcomment %}
             <a href="{% url 'glossary_index' %}" class="fhi-button fhi-button-secondary fhi-button-small">Glossary</a>
+            {% if call_script_on %}<a href="{% url 'call_script' %}" class="fhi-button fhi-button-secondary fhi-button-small">Phone Script</a>{% endif %}
         </div>
 
         <!-- Two columns that each run down the page: the government

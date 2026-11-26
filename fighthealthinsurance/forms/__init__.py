@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 else:
     _ReCaptchaMixinBase = object
 
-from fighthealthinsurance import consent, upload_limits
+from fighthealthinsurance import call_script, consent, upload_limits
 from fighthealthinsurance.form_utils import *
 from fighthealthinsurance.letter_placeholders import (
     blanks_to_name,
@@ -967,6 +967,34 @@ class ProPostInferedForm(BasePostInferedForm):
     in_network = forms.BooleanField(required=False)
     appeal_fax_number = forms.CharField(required=False)
     include_provided_health_history_in_appeal = forms.BooleanField(required=False)
+
+
+class CallScriptForm(StyledWidgetsMixin, forms.Form):
+    """The phone script page's own questions (call_script.py). From a case
+    only the goal is asked: the rest comes from the denial."""
+
+    goal = forms.ChoiceField(
+        choices=call_script.GOALS,
+        initial=call_script.GOAL_FIND_OUT_WHY,
+        widget=forms.RadioSelect,
+        error_messages={"required": "Please pick what you want from the call."},
+    )
+    insurer = forms.CharField(
+        max_length=call_script.INSURER_MAX,
+        required=False,
+        label="Your insurance company",
+    )
+    reason = forms.ChoiceField(
+        choices=list(call_script.REASON_LABELS.items()),
+        initial=call_script.REASON_OTHER,
+        required=False,
+        label="Why was it denied?",
+    )
+    procedure = forms.CharField(
+        max_length=call_script.PROCEDURE_MAX,
+        required=False,
+        label="What was denied?",
+    )
 
 
 class FollowUpTestForm(forms.Form):

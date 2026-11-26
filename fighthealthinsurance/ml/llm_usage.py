@@ -80,6 +80,7 @@ TASKS = (
     "synthesis",
     "prior_auth_letter",
     "regulator_letter",
+    "call_script",
     # Chat.
     "chat_reply",
     "chat_summary",

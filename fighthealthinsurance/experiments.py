@@ -81,6 +81,15 @@ EXPERIMENTS: Tuple[Experiment, ...] = (
         live_check="fighthealthinsurance.utils.arena_rankings_page_enabled",
     ),
     Experiment(
+        "CALL_SCRIPT_ENABLED",
+        "Phone script",
+        "The phone script page, /call-script, and the callouts on the send "
+        "and follow-up pages that lead to it. Off, it serves 404 and nothing "
+        "links to it.",
+        PAGES,
+        live_check="fighthealthinsurance.utils.call_script_enabled",
+    ),
+    Experiment(
         "PRO_VERSION_AVAILABLE",
         "Professional version available",
         "/pro_version shows the professional version with trial and learn-more "
