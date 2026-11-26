@@ -618,13 +618,18 @@ _LEGAL = re.compile(
 )
 _QUOTES = "\"'“”‘’"
 
-# A deadline stated as a value: a length of time ("4 days", "thirty days",
-# "a few weeks"), a date ("March 3", "3/15", "2027-03-15"), or a day named
-# from now ("tomorrow", "next week", "by Friday").
+# The prompt never gives an appeal deadline, so a script states none: no
+# length of time ("4 days", "fourteen days", "one hundred eighty days", "a few
+# weeks"), no date ("March 3", "3/15", "2027-03-15"), no day named from now
+# ("next week", "by Friday").
+_NUMBER_WORD = (
+    r"one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
+    r"|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen"
+    r"|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand"
+)
 _COUNT = (
-    r"\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
-    r"|fifteen|twenty|thirty|forty[- ]five|forty|sixty|ninety|hundred|few"
-    r"|several|couple(?:\s+of)?"
+    rf"\d+|(?:{_NUMBER_WORD})(?:[\s-]+(?:and\s+)?(?:{_NUMBER_WORD}))*"
+    r"|a|an|few|several|couple(?:\s+of)?"
 )
 _MONTH = (
     r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?"
@@ -637,16 +642,18 @@ _DEADLINE_VALUE = re.compile(
     rf"|\b(?:{_MONTH})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?\b"
     rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:{_MONTH})\b"
     r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b|\b\d{4}-\d{1,2}-\d{1,2}\b"
-    r"|\b(?:today|tonight|tomorrow|yesterday)\b"
     rf"|\b(?:next|this|last|by|on|until)\s+(?:week|month|year|{_WEEKDAY})\b"
     r"|\bend\s+of\s+(?:the\s+)?(?:week|month|year)\b",
     re.IGNORECASE,
 )
 # A deadline asserted without a value ("my deadline is coming up", "it is
-# due by then"). Asking about one ("what is my deadline?") asserts nothing.
+# due today"). Asking about one ("what is my deadline?") asserts nothing, and
+# "I'm calling today" names no deadline.
 _DEADLINE_CLAIM = re.compile(
     r"\bdeadlines?\s+(?:is|was|falls|ends|passes|passed|has|had)\b"
-    r"|\bdue\s+(?:by|on|in|soon)\b|\b(?:no|not)\s+later\s+than\b"
+    r"|\bdue\s+(?:by|on|in|soon|today|tonight|tomorrow)\b"
+    r"|\b(?:by|until)\s+(?:today|tonight|tomorrow)\b"
+    r"|\b(?:no|not)\s+later\s+than\b"
     r"|\bexpires\b|\bexpired\b|\blast\s+day\s+(?:is|was|to)\b"
     r"|\bwindow\s+(?:closes|ends)\b",
     re.IGNORECASE,
@@ -661,21 +668,11 @@ def _grounded(text: str, prompt: str) -> bool:
     return all(number in given for number in re.findall(r"\d+", text))
 
 
-def _deadline_values(text: str) -> set[str]:
-    return {
-        " ".join(m.group(0).lower().split()) for m in _DEADLINE_VALUE.finditer(text)
-    }
-
-
-def _deadline_grounded(text: str, prompt: str) -> bool:
-    """Any deadline ``text`` states is one the prompt states: the same length
-    of time, date or day, and a deadline asserted without one only when the
-    prompt gives one. The digits alone can't settle it: "MRI L4-L5" puts a 4
-    in the prompt, and "my deadline is 4 days away" would pass on it."""
-    supplied = _deadline_values(prompt)
-    if not _deadline_values(text) <= supplied:
-        return False
-    return bool(supplied) or not _DEADLINE_CLAIM.search(text)
+def _states_deadline(text: str) -> bool:
+    """``text`` states a deadline, which the prompt never gives. The digits
+    can't settle it: "MRI L4-L5" puts a 4 in the prompt, and "my deadline is
+    4 days away" would pass on it."""
+    return bool(_DEADLINE_VALUE.search(text) or _DEADLINE_CLAIM.search(text))
 
 
 def parse_tailoring(text: Optional[str], prompt: str) -> Optional[Tailoring]:
@@ -702,7 +699,7 @@ def parse_tailoring(text: Optional[str], prompt: str) -> Optional[Tailoring]:
     whole = " ".join([why, *questions])
     if (
         not _grounded(whole, prompt)
-        or not _deadline_grounded(whole, prompt)
+        or _states_deadline(whole)
         or _LEGAL.search(whole)
         or detect_false_promises(whole)
         or is_bad_output(whole, check_guardrail_phrases=True)

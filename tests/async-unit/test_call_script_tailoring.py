@@ -4,10 +4,10 @@ The prompt carries only structured facts, never the letter or the
 diagnosis. Outside models are asked only with the person's consent, and
 after ours. What a model writes is used only when it is the right shape and
 says nothing a script must not: a number the prompt didn't give (a made-up
-phone number or policy number), a deadline it didn't give (in digits, in
-words or as a date, though its digits appear elsewhere in the prompt), a law
-or citation, a promised outcome. Otherwise the next model is asked, and with none left the template
-stays.
+phone number or policy number), any deadline (the prompt never gives one,
+so one in digits, in words or as a date is made up, even when its digits
+appear in the procedure), a law or citation, a promised outcome. Otherwise
+the next model is asked, and with none left the template stays.
 """
 
 import asyncio
@@ -142,51 +142,64 @@ class ParseTest(SimpleTestCase):
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
 
-# "MRI L4-L5" puts a 4 in the prompt, so digit matching alone let an
-# invented "4 days" deadline through.
-L4_L5_PROMPT = make_call_script_prompt(
-    CallScriptInputs(
-        goal=GOAL_FIND_OUT_WHY,
-        insurer_name="Aetna",
-        reason_key="medical_necessity",
-        procedure="MRI L4-L5",
+def _prompt_for(procedure):
+    return make_call_script_prompt(
+        CallScriptInputs(
+            goal=GOAL_FIND_OUT_WHY,
+            insurer_name="Aetna",
+            reason_key="medical_necessity",
+            procedure=procedure,
+        )
     )
-)
-DEADLINE_PROMPT = PROMPT + "\nAppeal deadline: 180 days from the date of the denial."
 
 
 class DeadlineTest(SimpleTestCase):
-    def test_a_deadline_the_prompt_does_not_supply_is_refused_though_its_digit_is_there(
-        self,
-    ):
+    # Each procedure puts the deadline's digits or words in the prompt, so
+    # matching against the prompt alone would let the invented deadline in.
+    def test_a_deadline_whose_digit_is_in_the_procedure_is_refused(self):
         answer = _with(why="My appeal deadline is 4 days away.")
-        self.assertIsNone(parse_tailoring(answer, L4_L5_PROMPT))
+        self.assertIsNone(parse_tailoring(answer, _prompt_for("MRI L4-L5")))
+
+    def test_a_deadline_the_procedure_repeats_word_for_word_is_refused(self):
+        answer = _with(why="My appeal deadline is 12 weeks from the denial.")
+        prompt = _prompt_for("Botox injections every 12 weeks")
+        self.assertIsNone(parse_tailoring(answer, prompt))
+
+    def test_a_due_date_the_procedure_repeats_is_refused(self):
+        answer = _with(why="My appeal is due by March 3, so I need answers.")
+        self.assertIsNone(parse_tailoring(answer, _prompt_for("MRI on March 3")))
 
     def test_a_number_of_days_in_words_is_refused(self):
-        answer = _with(why="I have thirty days left to appeal this denial.")
+        answer = _with(why="I have fourteen days to appeal this denial.")
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
-    def test_a_due_date_is_refused(self):
+    def test_a_compound_number_of_days_in_words_is_refused(self):
+        answer = _with(why="I have one hundred eighty days to appeal this denial.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_due_weekday_is_refused(self):
         answer = _with(why="My appeal is due by Friday, so I need answers soon.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_due_today_is_refused(self):
+        answer = _with(why="My appeal is due today, so I need answers right away.")
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
     def test_a_deadline_asserted_without_a_value_is_refused(self):
         answer = _with(why="My deadline is coming up and I need to understand this.")
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
-    def test_a_deadline_the_prompt_supplies_is_accepted(self):
-        answer = _with(why="I have 180 days to appeal, and I want to use them well.")
-        self.assertIsNotNone(parse_tailoring(answer, DEADLINE_PROMPT))
-
-    def test_a_different_deadline_from_the_one_the_prompt_supplies_is_refused(self):
-        answer = _with(why="I have 30 days to appeal, and I want to use them well.")
-        self.assertIsNone(parse_tailoring(answer, DEADLINE_PROMPT))
+    def test_calling_today_is_accepted(self):
+        answer = _with(
+            why="I'm calling today because my MRI was denied as not medically necessary."
+        )
+        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
 
     def test_asking_about_the_deadline_is_accepted(self):
         answer = _with(
             questions=[
                 "Is there a deadline for my doctor to send more records?",
-                "Who reviewed my MRI request?",
+                "How many days do I have to appeal?",
             ]
         )
         self.assertIsNotNone(parse_tailoring(answer, PROMPT))
