@@ -29,3 +29,11 @@ def test_the_printed_privacy_policy_hides_the_header() -> None:
 
 def test_the_printed_mhmda_notice_hides_the_header() -> None:
     assert set(HEADER.group(1).split()) & _print_hidden_classes("mhmda.html")
+
+
+def test_the_printed_phone_script_hides_the_header() -> None:
+    assert set(HEADER.group(1).split()) & _print_hidden_classes("call_script.html")
+
+
+def test_the_printed_phone_script_hides_its_own_buttons() -> None:
+    assert "fhi-call-no-print" in _print_hidden_classes("call_script.html")

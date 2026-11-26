@@ -61,6 +61,7 @@ const entryFiles = [
   'appeal_fetcher.ts',
   'blog.tsx',
   'blog_post.tsx',
+  'call_script.ts',
   'chat_interface.tsx',
   'chooser.tsx',
   'entity_fetcher.ts',

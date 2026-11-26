@@ -1579,6 +1579,10 @@ UNREACHED: tuple[Exempt, ...] = (
     Exempt(
         "custom.css", ".pro-interest-form > .fhi-notice .errorlist", WRITTEN_AT_RUNTIME
     ),
+    # call_script.ts writes this tag beside the parts of a phone script our
+    # models tailored, once they arrive; no template carries it. It is
+    # --fhi-ink-2 on --fhi-surface, 7.2:1.
+    Exempt("custom.css", ".fhi-call-tailored-tag", WRITTEN_AT_RUNTIME),
 )
 
 

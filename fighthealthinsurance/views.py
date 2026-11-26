@@ -59,6 +59,7 @@ from fighthealthinsurance import (
     agent_docs,
     assistant_handoff_views,
     blog,
+    call_script,
     upload_limits,
     upload_rate_limit,
     common_view_logic,
@@ -117,6 +118,7 @@ from fighthealthinsurance.type_utils import User
 from fighthealthinsurance.email_utils import is_blocked_email
 from fighthealthinsurance.static_data import read_static_text
 from fighthealthinsurance.utils import (
+    call_script_enabled,
     denial_watch_page_enabled,
     is_valid_denial_id,
     ai_assistants_page_enabled,
@@ -4683,6 +4685,92 @@ def coverage_job_share() -> typing.Optional[str]:
     except Exception:
         logger.opt(exception=True).error("Denial Watch's coverage numbers unavailable")
         return None
+
+
+class CallScriptView(View):
+    """The phone script page (call_script.py). GET is the short form for
+    someone with no case here; a POST of it, or of a case from the callout on
+    the send page or the follow-up page, is the script.
+
+    A case is named by the same hidden fields those pages already carry, and
+    a post naming none we can find gets the form, never someone else's case.
+    """
+
+    template_name = "call_script.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not call_script_enabled():
+            raise Http404("This page is not available yet.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def _render(
+        self, request: HttpRequest, form: forms.Form, **context: typing.Any
+    ) -> HttpResponse:
+        return render(
+            request,
+            self.template_name,
+            {"title": "What to Say on the Phone", "form": form, **context},
+        )
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        return self._render(request, core_forms.CallScriptForm())
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        form = core_forms.CallScriptForm(request.POST)
+        if not form.is_valid():
+            return self._render(request, form)
+        goal = form.cleaned_data["goal"]
+        fields = call_script.case_fields(request.POST)
+        if fields:
+            denial = call_script.case_denial(fields)
+            if denial is None:
+                return self._render(
+                    request,
+                    core_forms.CallScriptForm(initial={"goal": goal}),
+                    case_not_found=True,
+                )
+            inputs = call_script.inputs_from_denial(
+                denial, goal, call_script.denial_type_names(denial)
+            )
+        else:
+            inputs = call_script.inputs_from_form(form.cleaned_data)
+        return self._render(
+            request,
+            form,
+            script=call_script.build_script(inputs),
+            case_fields=fields,
+            goals=call_script.GOALS,
+        )
+
+
+class CallScriptTailorView(View):
+    """The two parts of a case's phone script our models rewrite
+    (call_script.tailor_script), for call_script.ts to swap in. The page
+    already shows the template's own, so ``{"tailored": null}`` (no model
+    could write them, or what they wrote failed the checks) leaves it be."""
+
+    async def post(self, request: HttpRequest) -> HttpResponse:
+        if not call_script_enabled():
+            raise Http404("This page is not available yet.")
+        goal = request.POST.get("goal", "")
+        fields = call_script.case_fields(request.POST)
+        denial = await call_script.acase_denial(fields)
+        if denial is None or goal not in call_script.GOAL_LABELS:
+            raise Http404("No such case.")
+        inputs = call_script.inputs_from_denial(
+            denial, goal, await call_script.adenial_type_names(denial)
+        )
+        tailoring = await call_script.tailor_script(inputs, denial=denial)
+        if tailoring is None:
+            return JsonResponse({"tailored": None})
+        return JsonResponse(
+            {
+                "tailored": {
+                    "why_calling": tailoring.why_calling,
+                    "questions": list(tailoring.questions),
+                }
+            }
+        )
 
 
 class SharePlanDocumentsView(FormView):

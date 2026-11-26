@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load bundles %}
+{% comment %}
+The phone script page (call_script.py, views.CallScriptView). Without a
+script it is the short form; with one it is the script itself, and the same
+page printed is the printable version: the print rules below keep the script
+and its call-notes sheet and drop the site around it and the page's buttons.
+For a case, call_script.ts asks our models to tailor two parts of the script
+and swaps them in when they pass the checks; until then, and whenever they
+don't, the template's own words stay.
+{% endcomment %}
+
+{% block title %}What to Say on the Phone - Fight Health Insurance{% endblock title %}
+{% block metatitle %}What to Say on the Phone - Fight Health Insurance{% endblock metatitle %}
+{% block metadescription %}A phone script for calling your health insurance company about a denial: what to ask, what to write down, and what to say if you get stuck.{% endblock metadescription %}
+
+{% block scriptmagic %}
+<script src="{% bundle 'call_script' %}" type="module"></script>
+{% endblock scriptmagic %}
+
+{% block content %}
+<div class="fhi-page fhi-call-script">
+{% if script %}
+    {% include "partials/page_title.html" with title="Your phone script" lede=script.summary %}
+
+    <form class="fhi-call-goals fhi-call-no-print" method="post" action="{% url 'call_script' %}" aria-label="What you want from the call">
+        {% csrf_token %}
+        {% for name, value in case_fields.items %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% empty %}
+        <input type="hidden" name="insurer" value="{{ form.cleaned_data.insurer }}">
+        <input type="hidden" name="reason" value="{{ form.cleaned_data.reason }}">
+        <input type="hidden" name="procedure" value="{{ form.cleaned_data.procedure }}">
+        {% endfor %}
+        {% for value, label in goals %}
+        <button type="submit" name="goal" value="{{ value }}" class="fhi-button fhi-button-small {% if value == script.inputs.goal %}fhi-button-primary{% else %}fhi-button-secondary{% endif %}"{% if value == script.inputs.goal %} aria-current="true"{% endif %}>{{ label }}</button>
+        {% endfor %}
+    </form>
+
+    <p class="fhi-call-print-only">Goal: {{ script.goal_label }}</p>
+
+    <section class="fhi-call-step" aria-labelledby="call-before">
+        <h2 id="call-before">Before you call</h2>
+        <ul>
+            {% for line in script.before_you_call %}
+            <li>{{ line }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="fhi-call-step" aria-labelledby="call-start">
+        <h2 id="call-start"><span class="fhi-call-number">1</span> Start the call</h2>
+        {% for line in script.opening %}
+        <p class="fhi-call-say">“{{ line.text }}”{% if line.note %} <span class="fhi-call-write">✎ Write it down</span>{% endif %}</p>
+        {% endfor %}
+    </section>
+
+    <section class="fhi-call-step" aria-labelledby="call-why">
+        <h2 id="call-why"><span class="fhi-call-number">2</span> Why I'm calling</h2>
+        <p class="fhi-call-say" id="call-script-why" data-call-tailorable>“{{ script.why_calling }}”</p>
+    </section>
+
+    <section class="fhi-call-step" aria-labelledby="call-ask">
+        <h2 id="call-ask"><span class="fhi-call-number">3</span> Ask these, in order</h2>
+        <ol class="fhi-call-questions" id="call-script-questions">
+            {% for question in script.questions %}
+            <li{% if question.tailorable %} data-call-tailorable{% endif %}>“{{ question.text }}”{% if question.note %} <span class="fhi-call-write">✎ Write it down</span>{% endif %}</li>
+            {% endfor %}
+        </ol>
+    </section>
+
+    <section class="fhi-call-step" aria-labelledby="call-if">
+        <h2 id="call-if"><span class="fhi-call-number">4</span> If they say...</h2>
+        <dl class="fhi-call-if">
+            {% for they_say, you_say in script.if_they_say %}
+            <dt>{{ they_say }}</dt>
+            <dd>“{{ you_say }}”</dd>
+            {% endfor %}
+        </dl>
+    </section>
+
+    <section class="fhi-call-step" aria-labelledby="call-wrap">
+        <h2 id="call-wrap"><span class="fhi-call-number">5</span> Wrap up</h2>
+        {% for line in script.wrap_up %}
+        <p class="fhi-call-say">“{{ line }}”</p>
+        {% endfor %}
+    </section>
+
+    {% if case_fields %}
+    <p id="call-script-tailor-status" class="fhi-note fhi-call-no-print" role="status" aria-live="polite" hidden></p>
+    <form id="call-script-tailor" action="{% url 'call_script_tailor' %}" method="post" hidden>
+        {% csrf_token %}
+        {% for name, value in case_fields.items %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% endfor %}
+        <input type="hidden" name="goal" value="{{ script.inputs.goal }}">
+    </form>
+    {% endif %}
+
+    <div class="fhi-cluster fhi-call-no-print">
+        <button type="button" id="call-script-print" class="fhi-button fhi-button-primary">🖨 Print this script</button>
+        {% if not case_fields %}
+        <a href="{% url 'scan' %}" class="fhi-button fhi-button-secondary">Write my appeal letter</a>
+        {% endif %}
+    </div>
+
+    <section class="fhi-call-step fhi-call-notes" aria-labelledby="call-notes">
+        <h2 id="call-notes">Call notes</h2>
+        <p class="fhi-hint">Fill this in as you go. You'll want it for your appeal, and if you call again.</p>
+        <table class="fhi-call-notes-table">
+            <tbody>
+                {% for row in script.notes_rows %}
+                <tr><th scope="row">{{ row }}</th><td></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <p class="fhi-note fhi-call-footer">You make the call. We never call for you. This is general information, not legal or medical advice.</p>
+{% else %}
+    {% include "partials/page_title.html" with title="What to Say on the Phone" lede="Insurers train their reps for these calls. Here is a script for yours: what to ask, what to write down, and what to say if you get stuck." %}
+
+    {% if case_not_found %}
+    <div class="fhi-notice fhi-notice-warning" role="status">We couldn't open your case from here. Fill in the details below instead.</div>
+    {% endif %}
+
+    <form class="fhi-card fhi-stack" method="post" action="{% url 'call_script' %}" id="call_script_form">
+        {% csrf_token %}
+        <fieldset class="fhi-fieldset fhi-stack">
+            <legend><h2>What do you want from the call?</h2></legend>
+            {% for value, label in form.fields.goal.choices %}
+            <div class="fhi-check-row">
+                <input type="radio" id="goal_{{ value }}" name="goal" value="{{ value }}" class="fhi-check"{% if form.goal.value == value %} checked{% endif %}{% if form.goal.errors %} aria-invalid="true" aria-describedby="goal_error"{% endif %}>
+                <label for="goal_{{ value }}">{{ label }}</label>
+            </div>
+            {% endfor %}
+            {% include "partials/field_error.html" with id="goal_error" message="Please pick what you want from the call." errors=form.goal.errors %}
+        </fieldset>
+
+        <div class="fhi-field-group">
+            <label for="{{ form.insurer.id_for_label }}" class="fhi-label">{{ form.insurer.label }}</label>
+            {{ form.insurer }}
+        </div>
+
+        <div class="fhi-field-group">
+            <label for="{{ form.reason.id_for_label }}" class="fhi-label">{{ form.reason.label }}</label>
+            {{ form.reason }}
+            <small class="fhi-hint">Your denial letter usually says. If it doesn't, pick the last one.</small>
+        </div>
+
+        <div class="fhi-field-group">
+            <label for="{{ form.procedure.id_for_label }}" class="fhi-label">{{ form.procedure.label }} (optional)</label>
+            {{ form.procedure }}
+            <small class="fhi-hint">For example, "MRI of my lower back".</small>
+        </div>
+
+        <div class="fhi-actions">
+            <button type="submit" class="fhi-button fhi-button-primary fhi-button-large">Get my script</button>
+        </div>
+        <p class="fhi-hint">We don't ask for your name, member ID or email. Your script leaves blanks for those, for you to fill in.</p>
+    </form>
+
+    <p class="fhi-note fhi-call-footer">You make the call. We never call for you. This is general information, not legal or medical advice.</p>
+{% endif %}
+</div>
+{% endblock content %}
+
+{% block extra_style %}
+<style>
+    /* The printable version is this page: the script and its notes sheet,
+       none of the site around it, and none of the page's buttons. */
+    @media print {
+        .navbar-default, .fhi-chat-button, .github-fork-ribbon, footer, #site-banner, .site-banner, .betaribbon, .preloader, .fhi-call-no-print, .fhi-call-tailored-tag { display: none !important; }
+        body { background: #fff; }
+        .fhi-call-script { max-width: none; padding: 0; }
+        .fhi-call-print-only { display: block; font-weight: 700; margin: 0 0 0.75rem; }
+        /* Long steps may run onto the next page, but between lines, never
+           inside one, and a step's heading stays with its first line. */
+        .fhi-call-step { border: 0; padding: 0; margin-bottom: 0.75rem; }
+        .fhi-call-step > h2 { break-after: avoid; }
+        .fhi-call-say, .fhi-call-questions li, .fhi-call-if dd, .fhi-call-notes-table tr { break-inside: avoid; }
+        .fhi-call-say, .fhi-call-questions { font-size: 1rem; }
+        /* The notes sheet is for writing on: a page of its own, never split,
+           with rows tall enough for a pen. */
+        .fhi-call-notes { break-before: page; break-inside: avoid; }
+        .fhi-call-notes-table td { height: 3.25rem; }
+        a[href]::after { content: none; }
+    }
+</style>
+{% endblock extra_style %}
