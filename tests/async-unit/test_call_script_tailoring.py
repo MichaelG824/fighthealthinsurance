@@ -4,8 +4,9 @@ The prompt carries only structured facts, never the letter or the
 diagnosis. Outside models are asked only with the person's consent, and
 after ours. What a model writes is used only when it is the right shape and
 says nothing a script must not: a number the prompt didn't give (a made-up
-phone number or policy number), any deadline (the prompt never gives one,
-so one in digits, in words or as a date is made up, even when its digits
+phone number or policy number), any mention of a deadline, even in a
+question (the prompt never gives one and the script already asks for it, so
+one in digits, in words or as a date is made up, even when its digits
 appear in the procedure), a law or citation, a promised outcome. Otherwise
 the next model is asked, and with none left the template stays.
 """
@@ -243,23 +244,25 @@ class DeadlineTest(SimpleTestCase):
         answer = _with(why="My time to appeal runs out soon.")
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
-    def test_asking_indirectly_what_the_deadline_for_the_appeal_is_is_accepted(self):
-        answer = _with(
-            questions=[
-                "Can you tell me what the deadline for my appeal is?",
-                "Who reviewed my MRI request?",
-            ]
-        )
-        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+    def test_asking_indirectly_what_the_deadline_for_the_appeal_is_is_refused(self):
+        answer = _with(questions=['Can you tell me what the deadline for my appeal is?', "Who reviewed my MRI request?"])
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
 
-    def test_asking_indirectly_what_the_deadline_to_file_is_is_accepted(self):
-        answer = _with(
-            questions=[
-                "Could you confirm what the deadline to file is?",
-                "Who reviewed my MRI request?",
-            ]
-        )
-        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+    def test_asking_indirectly_what_the_deadline_to_file_is_is_refused(self):
+        answer = _with(questions=['Could you confirm what the deadline to file is?', "Who reviewed my MRI request?"])
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_asking_what_the_deadline_is_is_refused(self):
+        answer = _with(questions=['What is the deadline for my appeal?', "Who reviewed my MRI request?"])
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_asking_whether_there_is_a_deadline_is_refused(self):
+        answer = _with(questions=['Is there a deadline for my doctor to send more records?', "Who reviewed my MRI request?"])
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_deadline_claim_inside_a_question_is_refused(self):
+        answer = _with(questions=['My deadline is coming up, so can you expedite this?', "Who reviewed my MRI request?"])
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
 
     def test_may_as_a_verb_is_accepted(self):
         answer = _with(
@@ -267,27 +270,26 @@ class DeadlineTest(SimpleTestCase):
         )
         self.assertIsNotNone(parse_tailoring(answer, PROMPT))
 
-    def test_asking_what_the_deadline_is_is_accepted(self):
+    def test_late_followed_by_may_as_a_verb_is_accepted(self):
         answer = _with(
             questions=[
-                "What is the deadline for my appeal?",
+                "Records sent late may not be considered, right?",
                 "Who reviewed my MRI request?",
             ]
         )
         self.assertIsNotNone(parse_tailoring(answer, PROMPT))
 
+    def test_late_may_is_refused(self):
+        answer = _with(why="I have to appeal in late May, so I need answers.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_denied_due_to_is_accepted(self):
+        answer = _with(why="My claim was denied due to missing records.")
+        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+
     def test_calling_today_is_accepted(self):
         answer = _with(
             why="I'm calling today because my MRI was denied as not medically necessary."
-        )
-        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
-
-    def test_asking_about_the_deadline_is_accepted(self):
-        answer = _with(
-            questions=[
-                "Is there a deadline for my doctor to send more records?",
-                "How many days do I have to appeal?",
-            ]
         )
         self.assertIsNotNone(parse_tailoring(answer, PROMPT))
 

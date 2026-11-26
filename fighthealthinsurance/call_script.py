@@ -579,6 +579,8 @@ CALL_SCRIPT_SYSTEM_PROMPT = (
     "promise any outcome.\n"
     "- Ask only questions an insurance representative could answer about "
     "this denial, and do not repeat a question the script already asks.\n"
+    "- Do not mention deadlines, dates or time limits: the script already "
+    "asks about them.\n"
     "Output exactly this, and nothing else:\n"
     "WHY I'M CALLING:\n"
     "<two or three sentences>\n"
@@ -618,8 +620,9 @@ _LEGAL = re.compile(
 )
 _QUOTES = "\"'“”‘’"
 
-# The prompt never gives an appeal deadline or a date, so a script states
-# none, in a question or not: no length of time ("4 days", "fourteen days",
+# The prompt never gives an appeal deadline or a date, and the script
+# already asks for the deadline, so the tailored parts never mention one, in
+# a question or not: no length of time ("4 days", "fourteen days",
 # "one hundred eighty days", "a few weeks"), no month ("March 3", "until
 # mid-March", "early April"), no date ("3/15", "2027-03-15"), no day named
 # from now ("next week", "by Friday"). "May" is the month only with a day or
@@ -644,29 +647,26 @@ _DEADLINE_VALUE = re.compile(
     r"(?:days?|weeks?|months?|years?|hours?)\b"
     rf"|\b(?:{_MONTH})\b"
     r"|\bmay\.?\s+\d{1,2}(?:st|nd|rd|th)?\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?may\b"
-    r"|\b(?:by|until|before|in|of|mid|early|late)[\s-]+(?:the\s+)?"
-    r"(?:(?:end|middle|start|beginning)\s+of\s+)?may\b"
+    r"|\b(?:by|until|before|in|of)\s+(?:the\s+)?"
+    r"(?:(?:mid|early|late)[\s-]+|(?:end|middle|start|beginning)\s+of\s+)?may\b"
     r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b|\b\d{4}-\d{1,2}-\d{1,2}\b"
     rf"|\b(?:next|this|last|by|on|until)\s+(?:week|month|year|{_WEEKDAY})\b"
     r"|\bend\s+of\s+(?:the\s+)?(?:week|month|year)\b",
     re.IGNORECASE,
 )
-# A deadline asserted without a value ("my deadline is coming up", "it is
-# due today"). Only a statement asserts one: a question about the deadline
-# ("what is the deadline for my appeal?") doesn't, and "I'm calling today"
-# names no deadline.
-_DEADLINE_CLAIM = re.compile(
-    r"\bdeadlines?(?:\s+(?:to|for)\s+[\w\s]{1,30}?)?"
-    r"\s+(?:is|was|falls|ends|passes|passed|has|had)\b"
+# A deadline named without a value ("my deadline is coming up", "is there a
+# time limit?", "it is due today"). "Denied due to missing records" and
+# "I'm calling today" name no deadline.
+_DEADLINE_WORD = re.compile(
+    r"\bdeadlines?\b|\btime\s+limits?\b|\b(?:appeal|filing)\s+window\b"
+    r"|\bwindow\s+(?:is\s+)?(?:\w+\s+)?(?:clos(?:es|ing|ed)|ends|ending)\b"
     r"|\bdue\s+(?:by|on|in|soon|today|tonight|tomorrow)\b"
     r"|\b(?:by|until)\s+(?:today|tonight|tomorrow)\b"
     r"|\b(?:no|not)\s+later\s+than\b"
-    r"|\bexpires\b|\bexpired\b|\blast\s+day\s+(?:is|was|to)\b"
-    r"|\bwindow\s+(?:is\s+)?(?:\w+\s+)?(?:clos(?:es|ing|ed)|ends|ending)\b"
+    r"|\bexpir(?:e|es|ed|ing|ation)\b|\blast\s+day\b"
     r"|\b(?:runs?|running)\s+out\b",
     re.IGNORECASE,
 )
-_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 
 def _grounded(text: str, prompt: str) -> bool:
@@ -677,15 +677,11 @@ def _grounded(text: str, prompt: str) -> bool:
     return all(number in given for number in re.findall(r"\d+", text))
 
 
-def _states_deadline(text: str) -> bool:
-    """``text`` states a deadline, which the prompt never gives. The digits
+def _mentions_deadline(text: str) -> bool:
+    """``text`` mentions a deadline, which the prompt never gives. The digits
     can't settle it: "MRI L4-L5" puts a 4 in the prompt, and "my deadline is
     4 days away" would pass on it."""
-    return bool(_DEADLINE_VALUE.search(text)) or any(
-        _DEADLINE_CLAIM.search(sentence)
-        for sentence in _SENTENCE_END.split(text)
-        if not sentence.endswith("?")
-    )
+    return bool(_DEADLINE_VALUE.search(text) or _DEADLINE_WORD.search(text))
 
 
 def parse_tailoring(text: Optional[str], prompt: str) -> Optional[Tailoring]:
@@ -712,7 +708,7 @@ def parse_tailoring(text: Optional[str], prompt: str) -> Optional[Tailoring]:
     whole = " ".join([why, *questions])
     if (
         not _grounded(whole, prompt)
-        or _states_deadline(whole)
+        or _mentions_deadline(whole)
         or _LEGAL.search(whole)
         or detect_false_promises(whole)
         or is_bad_output(whole, check_guardrail_phrases=True)
