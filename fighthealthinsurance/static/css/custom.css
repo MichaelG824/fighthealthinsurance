@@ -3773,8 +3773,11 @@ summary.fhi-nav-link::after {
 
 @media print {
     /* A fixed control has no place on paper, and the policy pages are the
-       ones people print. */
-    .fhi-chat-button {
+       ones people print. The skip link sits 40px above the top of the
+       screen, which on paper is inside the page's margin, so every printed
+       page opened with it. */
+    .fhi-chat-button,
+    .skip-link {
         display: none;
     }
 }
