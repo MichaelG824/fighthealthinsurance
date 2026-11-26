@@ -4,8 +4,9 @@ The prompt carries only structured facts, never the letter or the
 diagnosis. Outside models are asked only with the person's consent, and
 after ours. What a model writes is used only when it is the right shape and
 says nothing a script must not: a number the prompt didn't give (a made-up
-phone number, deadline or policy number), a law or citation, a promised
-outcome. Otherwise the next model is asked, and with none left the template
+phone number or policy number), a deadline it didn't give (in digits, in
+words or as a date, though its digits appear elsewhere in the prompt), a law
+or citation, a promised outcome. Otherwise the next model is asked, and with none left the template
 stays.
 """
 
@@ -141,6 +142,56 @@ class ParseTest(SimpleTestCase):
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
 
+# "MRI L4-L5" puts a 4 in the prompt, so digit matching alone let an
+# invented "4 days" deadline through.
+L4_L5_PROMPT = make_call_script_prompt(
+    CallScriptInputs(
+        goal=GOAL_FIND_OUT_WHY,
+        insurer_name="Aetna",
+        reason_key="medical_necessity",
+        procedure="MRI L4-L5",
+    )
+)
+DEADLINE_PROMPT = PROMPT + "\nAppeal deadline: 180 days from the date of the denial."
+
+
+class DeadlineTest(SimpleTestCase):
+    def test_a_deadline_the_prompt_does_not_supply_is_refused_though_its_digit_is_there(
+        self,
+    ):
+        answer = _with(why="My appeal deadline is 4 days away.")
+        self.assertIsNone(parse_tailoring(answer, L4_L5_PROMPT))
+
+    def test_a_number_of_days_in_words_is_refused(self):
+        answer = _with(why="I have thirty days left to appeal this denial.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_due_date_is_refused(self):
+        answer = _with(why="My appeal is due by Friday, so I need answers soon.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_deadline_asserted_without_a_value_is_refused(self):
+        answer = _with(why="My deadline is coming up and I need to understand this.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_deadline_the_prompt_supplies_is_accepted(self):
+        answer = _with(why="I have 180 days to appeal, and I want to use them well.")
+        self.assertIsNotNone(parse_tailoring(answer, DEADLINE_PROMPT))
+
+    def test_a_different_deadline_from_the_one_the_prompt_supplies_is_refused(self):
+        answer = _with(why="I have 30 days to appeal, and I want to use them well.")
+        self.assertIsNone(parse_tailoring(answer, DEADLINE_PROMPT))
+
+    def test_asking_about_the_deadline_is_accepted(self):
+        answer = _with(
+            questions=[
+                "Is there a deadline for my doctor to send more records?",
+                "Who reviewed my MRI request?",
+            ]
+        )
+        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+
+
 class BackendsTest(SimpleTestCase):
     def test_no_outside_model_is_asked_without_consent(self):
         ours = _model("ours", None)
@@ -171,6 +222,16 @@ class TailorTest(SimpleTestCase):
         good = _model("good", GOOD)
         tailoring = self._tailor(_router([bad, good]))
         self.assertIsNotNone(tailoring)
+
+    def test_an_invented_deadline_never_reaches_the_script(self):
+        inputs = CallScriptInputs(
+            goal=GOAL_FIND_OUT_WHY,
+            insurer_name="Aetna",
+            reason_key="medical_necessity",
+            procedure="MRI L4-L5",
+        )
+        router = _router([_model("ours", _with(why="My appeal deadline is 4 days away."))])
+        self.assertIsNone(self._tailor(router, inputs))
 
     def test_when_every_model_fails_the_template_stays(self):
         router = _router([_model("one", None), _model("two", "not a script")])
