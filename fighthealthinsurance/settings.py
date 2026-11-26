@@ -252,6 +252,11 @@ class Base(Configuration):
     # Off by default: the page and its JSON serve 404, nothing links to it,
     # and it stays out of the sitemap and llms.txt. Dev/Test enable it.
     ARENA_RANKINGS_PAGE_ENABLED = _env_flag("ARENA_RANKINGS_PAGE_ENABLED")
+    # The phone script page, /call-script (call_script.py), and the callouts
+    # that lead to it from the send page and the follow-up page. Off by
+    # default: the page and its tailoring endpoint serve 404 and nothing
+    # links to them. Dev/Test enable it.
+    CALL_SCRIPT_ENABLED = _env_flag("CALL_SCRIPT_ENABLED")
     # Matching denials to the public plan documents we fetched
     # (plan_document_matcher) and quoting them in the appeal prompt. Off by
     # default: the corpus importer and admin work without it, so documents
@@ -1317,6 +1322,7 @@ class Dev(Base):
     # Keep the (pre-launch) Denial Watch page routable locally and in tests.
     DENIAL_WATCH_PAGE_ENABLED = True
     ARENA_RANKINGS_PAGE_ENABLED = True
+    CALL_SCRIPT_ENABLED = True
     CSRF_TRUSTED_ORIGINS = [
         "https://fightpaperwork.com",
         "https://localhost:3000",
