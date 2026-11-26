@@ -189,6 +189,45 @@ class DeadlineTest(SimpleTestCase):
         answer = _with(why="My deadline is coming up and I need to understand this.")
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
+    def test_a_month_given_as_the_last_chance_to_appeal_is_refused(self):
+        answer = _with(why="I have until March to appeal this denial.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_month_to_file_before_is_refused(self):
+        answer = _with(why="I need to file my appeal before March.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_the_end_of_a_month_is_refused(self):
+        answer = _with(why="I must appeal by the end of March.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_deadline_to_appeal_asserted_without_a_value_is_refused(self):
+        answer = _with(why="My deadline to appeal is coming up soon.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_deadline_for_the_appeal_asserted_without_a_value_is_refused(self):
+        answer = _with(why="The deadline for my appeal is close.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_closing_appeal_window_is_refused(self):
+        answer = _with(why="My appeal window is closing soon.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_may_as_a_verb_is_accepted(self):
+        answer = _with(
+            why="My MRI was denied, and I may need to resend my doctor's notes."
+        )
+        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+
+    def test_asking_what_the_deadline_is_is_accepted(self):
+        answer = _with(
+            questions=[
+                "What is the deadline for my appeal?",
+                "Who reviewed my MRI request?",
+            ]
+        )
+        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+
     def test_calling_today_is_accepted(self):
         answer = _with(
             why="I'm calling today because my MRI was denied as not medically necessary."

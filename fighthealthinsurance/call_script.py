@@ -620,8 +620,8 @@ _QUOTES = "\"'“”‘’"
 
 # The prompt never gives an appeal deadline, so a script states none: no
 # length of time ("4 days", "fourteen days", "one hundred eighty days", "a few
-# weeks"), no date ("March 3", "3/15", "2027-03-15"), no day named from now
-# ("next week", "by Friday").
+# weeks"), no date ("March 3", "until March", "3/15", "2027-03-15"), no day
+# named from now ("next week", "by Friday").
 _NUMBER_WORD = (
     r"one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
     r"|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen"
@@ -643,19 +643,21 @@ _DEADLINE_VALUE = re.compile(
     rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:{_MONTH})\b"
     r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b|\b\d{4}-\d{1,2}-\d{1,2}\b"
     rf"|\b(?:next|this|last|by|on|until)\s+(?:week|month|year|{_WEEKDAY})\b"
-    r"|\bend\s+of\s+(?:the\s+)?(?:week|month|year)\b",
+    r"|\bend\s+of\s+(?:the\s+)?(?:week|month|year)\b"
+    rf"|\b(?:by|until|before|in|end\s+of)\s+(?:the\s+end\s+of\s+)?(?:{_MONTH})\b",
     re.IGNORECASE,
 )
 # A deadline asserted without a value ("my deadline is coming up", "it is
 # due today"). Asking about one ("what is my deadline?") asserts nothing, and
 # "I'm calling today" names no deadline.
 _DEADLINE_CLAIM = re.compile(
-    r"\bdeadlines?\s+(?:is|was|falls|ends|passes|passed|has|had)\b"
+    r"\bdeadlines?(?:\s+(?:to|for)\s+[\w\s]{1,30}?)?"
+    r"\s+(?:is|was|falls|ends|passes|passed|has|had)\b"
     r"|\bdue\s+(?:by|on|in|soon|today|tonight|tomorrow)\b"
     r"|\b(?:by|until)\s+(?:today|tonight|tomorrow)\b"
     r"|\b(?:no|not)\s+later\s+than\b"
     r"|\bexpires\b|\bexpired\b|\blast\s+day\s+(?:is|was|to)\b"
-    r"|\bwindow\s+(?:closes|ends)\b",
+    r"|\bwindow\s+(?:is\s+)?(?:clos(?:es|ing|ed)|ends|ending)\b",
     re.IGNORECASE,
 )
 
