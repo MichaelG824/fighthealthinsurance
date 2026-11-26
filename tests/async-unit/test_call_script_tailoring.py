@@ -213,6 +213,54 @@ class DeadlineTest(SimpleTestCase):
         answer = _with(why="My appeal window is closing soon.")
         self.assertIsNone(parse_tailoring(answer, PROMPT))
 
+    def test_the_middle_of_a_month_is_refused(self):
+        answer = _with(why="I only have until the middle of March.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_mid_month_is_refused(self):
+        answer = _with(why="I have until mid-March, so I need answers soon.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_early_in_a_month_is_refused(self):
+        answer = _with(why="I have until early April to appeal.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_the_end_of_may_is_refused(self):
+        answer = _with(why="I must appeal by the end of May.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_a_month_asked_about_is_refused(self):
+        answer = _with(
+            questions=["Is my appeal due in March?", "Who reviewed my MRI request?"]
+        )
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_an_almost_closed_appeal_window_is_refused(self):
+        answer = _with(why="My appeal window is almost closed.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_time_to_appeal_running_out_is_refused(self):
+        answer = _with(why="My time to appeal runs out soon.")
+        self.assertIsNone(parse_tailoring(answer, PROMPT))
+
+    def test_asking_indirectly_what_the_deadline_for_the_appeal_is_is_accepted(self):
+        answer = _with(
+            questions=[
+                "Can you tell me what the deadline for my appeal is?",
+                "Who reviewed my MRI request?",
+            ]
+        )
+        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+
+    def test_asking_indirectly_what_the_deadline_to_file_is_is_accepted(self):
+        answer = _with(
+            questions=[
+                "Could you confirm what the deadline to file is?",
+                "Who reviewed my MRI request?",
+            ]
+        )
+        self.assertIsNotNone(parse_tailoring(answer, PROMPT))
+
     def test_may_as_a_verb_is_accepted(self):
         answer = _with(
             why="My MRI was denied, and I may need to resend my doctor's notes."

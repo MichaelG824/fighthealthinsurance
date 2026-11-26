@@ -618,10 +618,13 @@ _LEGAL = re.compile(
 )
 _QUOTES = "\"'“”‘’"
 
-# The prompt never gives an appeal deadline, so a script states none: no
-# length of time ("4 days", "fourteen days", "one hundred eighty days", "a few
-# weeks"), no date ("March 3", "until March", "3/15", "2027-03-15"), no day
-# named from now ("next week", "by Friday").
+# The prompt never gives an appeal deadline or a date, so a script states
+# none, in a question or not: no length of time ("4 days", "fourteen days",
+# "one hundred eighty days", "a few weeks"), no month ("March 3", "until
+# mid-March", "early April"), no date ("3/15", "2027-03-15"), no day named
+# from now ("next week", "by Friday"). "May" is the month only with a day or
+# after a word that dates it ("May 3", "by May", "the end of May"), not in
+# "I may need to resend it".
 _NUMBER_WORD = (
     r"one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
     r"|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen"
@@ -632,24 +635,26 @@ _COUNT = (
     r"|a|an|few|several|couple(?:\s+of)?"
 )
 _MONTH = (
-    r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?"
+    r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|june?|july?"
     r"|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
 )
 _WEEKDAY = r"monday|tuesday|wednesday|thursday|friday|saturday|sunday"
 _DEADLINE_VALUE = re.compile(
     rf"\b(?:{_COUNT})\s*-?\s*(?:calendar\s+|business\s+|working\s+)?"
     r"(?:days?|weeks?|months?|years?|hours?)\b"
-    rf"|\b(?:{_MONTH})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?\b"
-    rf"|\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:{_MONTH})\b"
+    rf"|\b(?:{_MONTH})\b"
+    r"|\bmay\.?\s+\d{1,2}(?:st|nd|rd|th)?\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?may\b"
+    r"|\b(?:by|until|before|in|of|mid|early|late)[\s-]+(?:the\s+)?"
+    r"(?:(?:end|middle|start|beginning)\s+of\s+)?may\b"
     r"|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b|\b\d{4}-\d{1,2}-\d{1,2}\b"
     rf"|\b(?:next|this|last|by|on|until)\s+(?:week|month|year|{_WEEKDAY})\b"
-    r"|\bend\s+of\s+(?:the\s+)?(?:week|month|year)\b"
-    rf"|\b(?:by|until|before|in|end\s+of)\s+(?:the\s+end\s+of\s+)?(?:{_MONTH})\b",
+    r"|\bend\s+of\s+(?:the\s+)?(?:week|month|year)\b",
     re.IGNORECASE,
 )
 # A deadline asserted without a value ("my deadline is coming up", "it is
-# due today"). Asking about one ("what is my deadline?") asserts nothing, and
-# "I'm calling today" names no deadline.
+# due today"). Only a statement asserts one: a question about the deadline
+# ("what is the deadline for my appeal?") doesn't, and "I'm calling today"
+# names no deadline.
 _DEADLINE_CLAIM = re.compile(
     r"\bdeadlines?(?:\s+(?:to|for)\s+[\w\s]{1,30}?)?"
     r"\s+(?:is|was|falls|ends|passes|passed|has|had)\b"
@@ -657,9 +662,11 @@ _DEADLINE_CLAIM = re.compile(
     r"|\b(?:by|until)\s+(?:today|tonight|tomorrow)\b"
     r"|\b(?:no|not)\s+later\s+than\b"
     r"|\bexpires\b|\bexpired\b|\blast\s+day\s+(?:is|was|to)\b"
-    r"|\bwindow\s+(?:is\s+)?(?:clos(?:es|ing|ed)|ends|ending)\b",
+    r"|\bwindow\s+(?:is\s+)?(?:\w+\s+)?(?:clos(?:es|ing|ed)|ends|ending)\b"
+    r"|\b(?:runs?|running)\s+out\b",
     re.IGNORECASE,
 )
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 
 def _grounded(text: str, prompt: str) -> bool:
@@ -674,7 +681,11 @@ def _states_deadline(text: str) -> bool:
     """``text`` states a deadline, which the prompt never gives. The digits
     can't settle it: "MRI L4-L5" puts a 4 in the prompt, and "my deadline is
     4 days away" would pass on it."""
-    return bool(_DEADLINE_VALUE.search(text) or _DEADLINE_CLAIM.search(text))
+    return bool(_DEADLINE_VALUE.search(text)) or any(
+        _DEADLINE_CLAIM.search(sentence)
+        for sentence in _SENTENCE_END.split(text)
+        if not sentence.endswith("?")
+    )
 
 
 def parse_tailoring(text: Optional[str], prompt: str) -> Optional[Tailoring]:
